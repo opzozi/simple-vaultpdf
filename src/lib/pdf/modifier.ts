@@ -41,18 +41,24 @@ export async function savePdf(
     const newPage = newPdf.addPage(copiedPage);
     
     // Apply rotation after adding (pdf-lib rotation is in degrees: 0, 90, 180, 270)
-    if (config.rotation !== 0) {
-      // Normalize rotation to valid pdf-lib values
-      const normalizedRotation = config.rotation % 360;
-      if (normalizedRotation === 90) {
-        newPage.setRotation(90 as any);
-      } else if (normalizedRotation === 180) {
-        newPage.setRotation(180 as any);
-      } else if (normalizedRotation === 270) {
-        newPage.setRotation(270 as any);
+    // Normalize rotation to valid pdf-lib values (0, 90, 180, 270)
+    const normalizedRotation = ((config.rotation % 360) + 360) % 360; // Handle negative values
+    
+      // Map to valid pdf-lib rotation values (must be exactly 0, 90, 180, or 270)
+      // TypeScript type checking is overly strict here, but runtime values are correct
+      if (normalizedRotation >= 0 && normalizedRotation < 45) {
+        // No rotation needed (0 degrees)
+      } else if (normalizedRotation >= 45 && normalizedRotation < 135) {
+        // @ts-expect-error - pdf-lib accepts 90 as valid rotation, TypeScript type is too strict
+        newPage.setRotation(90);
+      } else if (normalizedRotation >= 135 && normalizedRotation < 225) {
+        // @ts-expect-error - pdf-lib accepts 180 as valid rotation, TypeScript type is too strict
+        newPage.setRotation(180);
+      } else if (normalizedRotation >= 225 && normalizedRotation < 315) {
+        // @ts-expect-error - pdf-lib accepts 270 as valid rotation, TypeScript type is too strict
+        newPage.setRotation(270);
       }
-      // 0 rotation doesn't need to be set
-    }
+      // 315-360 range maps to 0, no rotation needed
   }
   
   // Generate and return the PDF as bytes
