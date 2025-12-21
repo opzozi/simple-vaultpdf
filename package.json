@@ -1,6 +1,6 @@
 {
   "name": "simple-vault-pdf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A secure, local-first PDF manipulation Chrome Extension - Edit, merge, split, OCR, and manage PDFs offline without subscriptions",
   "type": "module",
   "scripts": {
