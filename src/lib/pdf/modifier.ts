@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, degrees } from 'pdf-lib';
 import type { PageConfig } from './store';
 
 /**
@@ -40,25 +40,32 @@ export async function savePdf(
     // Add the page to the new PDF first
     const newPage = newPdf.addPage(copiedPage);
     
-    // Apply rotation after adding (pdf-lib rotation is in degrees: 0, 90, 180, 270)
-    // Normalize rotation to valid pdf-lib values (0, 90, 180, 270)
-    const normalizedRotation = ((config.rotation % 360) + 360) % 360; // Handle negative values
+    let currentRotation = 0;
+    try {
+      const rotationObj = newPage.getRotation();
+      currentRotation = typeof rotationObj === 'object' && 'angle' in rotationObj 
+        ? rotationObj.angle 
+        : (typeof rotationObj === 'number' ? rotationObj : 0);
+    } catch (error) {
+      currentRotation = 0;
+    }
     
-      // Map to valid pdf-lib rotation values (must be exactly 0, 90, 180, or 270)
-      // TypeScript type checking is overly strict here, but runtime values are correct
-      if (normalizedRotation >= 0 && normalizedRotation < 45) {
-        // No rotation needed (0 degrees)
-      } else if (normalizedRotation >= 45 && normalizedRotation < 135) {
-        // @ts-expect-error - pdf-lib accepts 90 as valid rotation, TypeScript type is too strict
-        newPage.setRotation(90);
-      } else if (normalizedRotation >= 135 && normalizedRotation < 225) {
-        // @ts-expect-error - pdf-lib accepts 180 as valid rotation, TypeScript type is too strict
-        newPage.setRotation(180);
-      } else if (normalizedRotation >= 225 && normalizedRotation < 315) {
-        // @ts-expect-error - pdf-lib accepts 270 as valid rotation, TypeScript type is too strict
-        newPage.setRotation(270);
+    const userRotation = typeof config.rotation === 'string' 
+      ? parseInt(config.rotation, 10) 
+      : (typeof config.rotation === 'number' ? config.rotation : 0);
+    
+    const normalizedUserRotation = ((userRotation % 360) + 360) % 360;
+    const desiredRotation = ((currentRotation + normalizedUserRotation) % 360 + 360) % 360;
+    
+    if (desiredRotation !== currentRotation) {
+      if (desiredRotation >= 45 && desiredRotation < 135) {
+        newPage.setRotation(degrees(90));
+      } else if (desiredRotation >= 135 && desiredRotation < 225) {
+        newPage.setRotation(degrees(180));
+      } else if (desiredRotation >= 225 && desiredRotation < 315) {
+        newPage.setRotation(degrees(270));
       }
-      // 315-360 range maps to 0, no rotation needed
+    }
   }
   
   // Generate and return the PDF as bytes
@@ -93,10 +100,10 @@ export async function savePdfToFile(
       await writable.close();
       return;
     } catch (error) {
-      // User cancelled or error occurred, fall back to download
-      if ((error as Error).name !== 'AbortError') {
-        console.error('Error using File System Access API:', error);
+      if ((error as Error).name === 'AbortError') {
+        return;
       }
+      console.error('Error using File System Access API:', error);
     }
   }
   

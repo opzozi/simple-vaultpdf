@@ -119,14 +119,25 @@ const PageGrid: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!file || pages.length === 0) return;
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const handleSave = async (e?: React.MouseEvent) => {
+    // Prevent double-click or multiple rapid clicks
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
+    if (!file || pages.length === 0 || isSaving) return;
+    
+    setIsSaving(true);
     try {
       await savePdfToFile(file, pages);
     } catch (error) {
       console.error('Error saving PDF:', error);
       alert('Failed to save PDF. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -458,11 +469,11 @@ const PageGrid: React.FC = () => {
           {/* Save Button */}
           <button
             onClick={handleSave}
-            disabled={isLoading || !file}
+            disabled={isLoading || !file || isSaving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
           >
             <Save className="w-4 h-4" />
-            Save PDF
+            {isSaving ? 'Saving...' : 'Save PDF'}
           </button>
           
           <button
