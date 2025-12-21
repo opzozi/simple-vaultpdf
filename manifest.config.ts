@@ -8,7 +8,7 @@ export default defineManifest({
   version: packageJson.version,
   description: 'Secure, local-first PDF editor. Edit, merge, split, OCR text extraction, and manage PDFs offline. No cloud, no subscriptions.',
   author: 'Simple VaultPDF Team',
-  homepage_url: 'https://github.com/opzozi/simple-vault-pdf',
+  homepage_url: 'https://github.com/opzozi/simple-vaultpdf',
   // Note: support_url is not a valid manifest key - set it in Chrome Web Store Developer Dashboard instead
   permissions: [
     'storage',

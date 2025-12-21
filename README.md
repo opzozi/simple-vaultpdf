@@ -60,7 +60,7 @@ If you want to build, modify, or contribute to this project, follow these steps:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/opzozi/simple-vault-pdf.git
+git clone https://github.com/opzozi/simple-vaultpdf.git
 cd simple-vault-pdf
 ```
 
