@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Settings, FolderOpen, Heart, Trash2, Star, Shield, ArrowLeft } from 'lucide-react';
+import { FileText, Settings, FolderOpen, Heart, Trash2, Star, Shield, ArrowLeft, ExternalLink } from 'lucide-react';
 import packageJson from '../../package.json';
 
 const POPUP_VERSION = packageJson.version || '1.0.0';
@@ -28,12 +28,10 @@ const Popup: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      // Clear localStorage
       if (typeof localStorage !== 'undefined') {
         localStorage.clear();
       }
 
-      // Clear Chrome Storage
       chrome.storage.local.clear(() => {
         console.log('Chrome storage cleared');
       });
@@ -41,7 +39,6 @@ const Popup: React.FC = () => {
         console.log('Chrome sync storage cleared');
       });
 
-      // Clear IndexedDB (attempt)
       if ('indexedDB' in window) {
         indexedDB.databases().then((databases) => {
           databases.forEach((db) => {
@@ -54,7 +51,6 @@ const Popup: React.FC = () => {
         });
       }
 
-      // Reload extension after a short delay
       setTimeout(() => {
         chrome.runtime.reload();
       }, 500);
@@ -65,12 +61,19 @@ const Popup: React.FC = () => {
   };
 
   const handleRateUs = () => {
-    chrome.tabs.create({ url: 'https://chrome.google.com/webstore' });
+    chrome.tabs.create({ url: 'https://chromewebstore.google.com/detail/simple-vaultpdf/nefkedjebfockbphoninolplkhgpakoh/reviews?hl=hu&utm_source=ext_sidebar' });
   };
 
   const handlePrivacyPolicy = () => {
-    // Placeholder - will be updated later
-    alert('Privacy Policy coming soon. This extension processes all data locally and does not send any information to external servers.');
+    chrome.tabs.create({ url: 'https://github.com/opzozi/simple-vaultpdf/blob/main/PRIVACY.md' });
+  };
+
+  const openSimpleImageConverter = () => {
+    chrome.tabs.create({ url: 'https://chromewebstore.google.com/detail/simple-image-converter/clinbfiephmemllcffpddoabnknkaeki?hl=hu&utm_source=ext_sidebar' });
+  };
+
+  const openTailwindColorPicker = () => {
+    chrome.tabs.create({ url: 'https://chromewebstore.google.com/detail/tailwind-color-picker/iijbeejepebedocldehadgofaejcmbla?hl=hu&utm_source=ext_sidebar' });
   };
 
   if (showSettings) {
@@ -94,17 +97,17 @@ const Popup: React.FC = () => {
         {/* Settings Menu */}
         <div className="flex-1 p-2 pb-16 overflow-y-auto">
           <div className="space-y-1">
-            {/* Donate Button */}
+            {/* Privacy Policy Button */}
             <button
-              onClick={handleDonate}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-pink-50 transition-colors group border border-transparent hover:border-pink-200"
+              onClick={handlePrivacyPolicy}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-blue-50 transition-colors group border border-transparent hover:border-blue-200"
             >
-              <div className="p-1.5 rounded-md bg-pink-100 group-hover:bg-pink-200 transition-colors">
-                <Heart className="w-4 h-4 text-pink-600" />
+              <div className="p-1.5 rounded-md bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                <Shield className="w-4 h-4 text-blue-600" />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900">Support Development</div>
-                <div className="text-xs text-gray-500">Donate via PayPal</div>
+                <div className="text-sm font-medium text-gray-900">Privacy Policy</div>
+                <div className="text-xs text-gray-500">How we handle your data</div>
               </div>
             </button>
 
@@ -121,34 +124,6 @@ const Popup: React.FC = () => {
                 <div className="text-xs text-gray-500">Clear all data & reload</div>
               </div>
             </button>
-
-            {/* Rate Us Button */}
-            <button
-              onClick={handleRateUs}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-yellow-50 transition-colors group border border-transparent hover:border-yellow-200"
-            >
-              <div className="p-1.5 rounded-md bg-yellow-100 group-hover:bg-yellow-200 transition-colors">
-                <Star className="w-4 h-4 text-yellow-600" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900">Rate Simple VaultPDF</div>
-                <div className="text-xs text-gray-500">Share your feedback</div>
-              </div>
-            </button>
-
-            {/* Privacy Policy Button */}
-            <button
-              onClick={handlePrivacyPolicy}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-left rounded-lg hover:bg-blue-50 transition-colors group border border-transparent hover:border-blue-200"
-            >
-              <div className="p-1.5 rounded-md bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                <Shield className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-gray-900">Privacy Policy</div>
-                <div className="text-xs text-gray-500">How we handle your data</div>
-              </div>
-            </button>
           </div>
         </div>
 
@@ -161,15 +136,15 @@ const Popup: React.FC = () => {
   }
 
   return (
-    <div className="w-64 bg-white relative min-h-[200px] flex flex-col">
+    <div className="w-64 bg-white relative min-h-[400px] flex flex-col">
       {/* Main View */}
-      <div className="p-4 pb-16 flex-1">
+      <div className="p-4 pb-20 flex-1 overflow-y-auto">
         <div className="flex items-center gap-2 mb-4">
           <FileText className="w-5 h-5 text-blue-600" />
           <h1 className="text-lg font-semibold text-gray-900">Simple VaultPDF</h1>
         </div>
         
-        <div className="space-y-2">
+        <div className="space-y-2 mb-6">
           <button
             onClick={openVault}
             className="w-full flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -186,11 +161,69 @@ const Popup: React.FC = () => {
             Settings
           </button>
         </div>
+
+        {/* Rate & Support Section */}
+        <div className="border-t border-gray-200 pt-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Rate & Support</h3>
+          <div className="space-y-2">
+            <button
+              onClick={handleRateUs}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <Star className="w-4 h-4 text-yellow-500" />
+              <span>Rate Simple VaultPDF</span>
+              <ExternalLink className="w-3 h-3 text-gray-400 ml-auto" />
+            </button>
+            <button
+              onClick={handleDonate}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+            >
+              <Heart className="w-4 h-4" />
+              <span>Support on PayPal</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Recommended Extensions */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">More from Developer</h3>
+          <div className="space-y-2">
+            <button
+              onClick={openSimpleImageConverter}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                SIC
+              </div>
+              <span className="flex-1 text-left">Simple Image Converter</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" />
+            </button>
+            <button
+              onClick={openTailwindColorPicker}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <div className="w-6 h-6 rounded bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold">
+                TCP
+              </div>
+              <span className="flex-1 text-left">Tailwind Color Picker</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Footer with Version */}
       <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-        <p className="text-xs text-gray-500 text-center">v{POPUP_VERSION}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">v{POPUP_VERSION}</p>
+          <button
+            onClick={handleRateUs}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-yellow-600 transition-colors"
+          >
+            <Star className="w-3 h-3" />
+            <span>Rate</span>
+          </button>
+        </div>
       </div>
     </div>
   );
