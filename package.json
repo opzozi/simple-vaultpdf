@@ -1,7 +1,7 @@
 {
   "name": "simple-vault-pdf",
-  "version": "1.0.2",
-  "description": "A secure, local-first PDF manipulation Chrome Extension - Edit, merge, split, OCR, and manage PDFs offline without subscriptions",
+  "version": "1.2.0",
+  "description": "Local PDF editor Chrome extension: merge, rotate, extract text, and OCR scanned pages on your device.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "generate-icons": "node scripts/generate-icons.js",
+    "prepare:ocr": "node scripts/prepare-ocr-assets.js",
     "package:webstore": "node scripts/package-for-webstore.js",
     "prepare:images": "node scripts/prepare-webstore-images.js"
   },

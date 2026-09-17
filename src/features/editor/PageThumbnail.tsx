@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { RenderTask } from 'pdfjs-dist';
-import { Trash2, RotateCw } from 'lucide-react';
+import { Trash2, RotateCw, RotateCcw } from 'lucide-react';
 
 interface PageThumbnailProps {
   pdfDocument: PDFDocumentProxy;
@@ -11,6 +11,7 @@ interface PageThumbnailProps {
   isSelected?: boolean;
   onDelete: () => void;
   onRotate: () => void;
+  onRestore?: () => void;
   onToggleSelect?: () => void;
   dragHandleProps?: any;
 }
@@ -23,6 +24,7 @@ const PageThumbnail: React.FC<PageThumbnailProps> = ({
   isSelected = false,
   onDelete,
   onRotate,
+  onRestore,
   onToggleSelect,
   dragHandleProps,
 }) => {
@@ -47,8 +49,8 @@ const PageThumbnail: React.FC<PageThumbnailProps> = ({
         const context = canvas.getContext('2d');
         if (!context) return;
 
-        // Use a smaller scale for thumbnails
-        const viewport = page.getViewport({ scale: 0.3 });
+        const totalRotation = ((page.rotate + rotation) % 360 + 360) % 360;
+        const viewport = page.getViewport({ scale: 0.3, rotation: totalRotation });
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
@@ -88,7 +90,7 @@ const PageThumbnail: React.FC<PageThumbnailProps> = ({
         renderTaskRef.current = null;
       }
     };
-  }, [pdfDocument, pageNumber]);
+  }, [pdfDocument, pageNumber, rotation]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Ctrl+Click or Cmd+Click to toggle selection
@@ -111,9 +113,6 @@ const PageThumbnail: React.FC<PageThumbnailProps> = ({
         }
         transition-all
       `}
-      style={{
-        transform: `rotate(${rotation}deg)`,
-      }}
       onClick={handleCardClick}
     >
       <canvas
@@ -187,8 +186,23 @@ const PageThumbnail: React.FC<PageThumbnailProps> = ({
       
       {/* Deleted indicator */}
       {isDeleted && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-100 bg-opacity-80">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-red-100 bg-opacity-80">
           <span className="text-red-600 font-semibold">Deleted</span>
+          {onRestore && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onRestore();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="px-3 py-1.5 text-sm font-medium bg-white text-red-700 rounded-lg shadow hover:bg-red-50 transition-colors flex items-center gap-1.5"
+              title="Restore page"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restore
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
+import { mergePDFsImageBased } from './mergeUtilsImageBased';
 
 /**
  * Merge multiple PDF files into one
@@ -257,6 +258,27 @@ export async function mergePDFs(
     // Silently fail - the caller will try image-based approach
     // No need to log - this is expected when pdf-lib can't process certain PDFs
     throw error;
+  }
+}
+
+export async function mergePdfFilesWithFallback(
+  files: File[]
+): Promise<{ file: File; usedImageBased: boolean }> {
+  if (files.length === 0) {
+    throw new Error('No PDF files to merge');
+  }
+  if (files.length === 1) {
+    return { file: files[0], usedImageBased: false };
+  }
+
+  const [first, ...rest] = files;
+  try {
+    const file = await mergePDFs(first, rest);
+    return { file, usedImageBased: false };
+  } catch (directError) {
+    console.warn('[PDF Merge] Direct merge failed, falling back to image-based merge:', directError);
+    const file = await mergePDFsImageBased(first, rest);
+    return { file, usedImageBased: true };
   }
 }
 

@@ -1,6 +1,7 @@
 // PDF.js wrappers and utilities
 export { pdfjsLib } from './init';
 export { usePdfStore } from './store';
+export { extractNativePageText, isUsableTextLayer } from './extractText';
 
 import { pdfjsLib } from './init';
 import { usePdfStore } from './store';

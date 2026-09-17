@@ -1,8 +1,20 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { crx } from '@crxjs/vite-plugin';
 import manifest from './manifest.config';
 import path from 'path';
+
+function stripHtmlCrossOrigin(): Plugin {
+  return {
+    name: 'strip-html-crossorigin',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      return html
+        .replace(/<link rel="modulepreload"[^>]*>/g, '')
+        .replace(/\s+crossorigin(="[^"]*")?/g, '');
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
@@ -13,6 +25,7 @@ export default defineConfig({
         injectCss: true,
       },
     }),
+    stripHtmlCrossOrigin(),
   ],
   resolve: {
     alias: {
@@ -30,6 +43,7 @@ export default defineConfig({
     },
   },
   build: {
+    modulePreload: false,
     rollupOptions: {
       input: {
         popup: path.resolve(__dirname, 'src/popup/index.html'),

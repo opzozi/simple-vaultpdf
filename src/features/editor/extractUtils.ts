@@ -1,5 +1,6 @@
-import { PDFDocument, degrees } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 import type { PageConfig } from '@/lib/pdf/store';
+import { applyPageRotation } from '@/lib/pdf/rotation';
 
 /**
  * Extract selected pages to a new PDF file
@@ -47,33 +48,7 @@ export async function extractPagesToPDF(
       // Copy the page
       const [copiedPage] = await extractedPdf.copyPages(originalPdf, [originalPageIndex]);
       const newPage = extractedPdf.addPage(copiedPage);
-
-      let currentRotation = 0;
-      try {
-        const rotationObj = newPage.getRotation();
-        currentRotation = typeof rotationObj === 'object' && 'angle' in rotationObj 
-          ? rotationObj.angle 
-          : (typeof rotationObj === 'number' ? rotationObj : 0);
-      } catch (error) {
-        currentRotation = 0;
-      }
-      
-      const userRotation = typeof config.rotation === 'string' 
-        ? parseInt(config.rotation, 10) 
-        : (typeof config.rotation === 'number' ? config.rotation : 0);
-      
-      const normalizedUserRotation = ((userRotation % 360) + 360) % 360;
-      const desiredRotation = ((currentRotation + normalizedUserRotation) % 360 + 360) % 360;
-      
-      if (desiredRotation !== currentRotation) {
-        if (desiredRotation >= 45 && desiredRotation < 135) {
-          newPage.setRotation(degrees(90));
-        } else if (desiredRotation >= 135 && desiredRotation < 225) {
-          newPage.setRotation(degrees(180));
-        } else if (desiredRotation >= 225 && desiredRotation < 315) {
-          newPage.setRotation(degrees(270));
-        }
-      }
+      applyPageRotation(newPage, config);
     }
 
     // Generate extracted PDF as bytes

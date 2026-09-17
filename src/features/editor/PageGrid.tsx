@@ -23,8 +23,7 @@ import { useOcr } from '@/features/ocr/useOcr';
 import OcrResultModal from '@/features/ocr/OcrResultModal';
 import LanguageDownloadModal from '@/features/ocr/LanguageDownloadModal';
 import OcrPageSelectionModal from '@/features/ocr/OcrPageSelectionModal';
-import { mergePDFs } from './mergeUtils';
-import { mergePDFsImageBased } from './mergeUtilsImageBased';
+import { mergePdfFilesWithFallback } from './mergeUtils';
 import { extractPagesToPDF } from './extractUtils';
 import { loadPDFIntoStore } from '@/lib/pdf';
 
@@ -41,7 +40,7 @@ const SortablePageItem: React.FC<SortablePageItemProps> = ({
   rotation,
   isDeleted,
 }) => {
-  const { pdfDocument, rotatePage, deletePage, selectedPageIds, togglePageSelection: toggleSelection } = usePdfStore();
+  const { pdfDocument, rotatePage, deletePage, restorePage, selectedPageIds, togglePageSelection: toggleSelection } = usePdfStore();
   const {
     attributes,
     listeners,
@@ -69,6 +68,7 @@ const SortablePageItem: React.FC<SortablePageItemProps> = ({
         isSelected={selectedPageIds.has(id)}
         onDelete={() => deletePage(id)}
         onRotate={() => rotatePage(id)}
+        onRestore={() => restorePage(id)}
         onToggleSelect={() => toggleSelection(id)}
         dragHandleProps={listeners}
       />
@@ -146,11 +146,10 @@ const PageGrid: React.FC = () => {
     setShowPageSelectionModal(true);
   };
 
-  const handlePageSelectionConfirm = async (selectedPages: number[]) => {
+  const handlePageSelectionConfirm = async (selectedPages: number[], options: { forceOcr: boolean }) => {
     setShowPageSelectionModal(false);
-    console.log('Starting OCR for pages:', selectedPages);
     try {
-      await processPages(selectedPages);
+      await processPages(selectedPages, options);
     } catch (err) {
       console.error('Failed to process pages:', err);
     }
@@ -173,24 +172,10 @@ const PageGrid: React.FC = () => {
       // Convert FileList to Array
       const newFilesArray = Array.from(selectedFiles);
 
-      // Always try image-based merge first to avoid pdf-lib internal errors
-      // This prevents "Trying to parse invalid object" errors from appearing
-      let mergedFile: File;
-      let usedImageBased = true;
-      
-      try {
-        mergedFile = await mergePDFsImageBased(file, newFilesArray);
-      } catch (imageBasedError) {
-        // If image-based fails, try direct merge as fallback
-        try {
-          mergedFile = await mergePDFs(file, newFilesArray);
-          usedImageBased = false;
-        } catch (directMergeError) {
-          // Both methods failed
-          const imageErrorMsg = imageBasedError instanceof Error ? imageBasedError.message : String(imageBasedError);
-          throw new Error(`PDF merge failed: ${imageErrorMsg}`);
-        }
-      }
+      const { file: mergedFile, usedImageBased } = await mergePdfFilesWithFallback([
+        file,
+        ...newFilesArray,
+      ]);
 
       // Validate merged file before reloading
       if (!mergedFile || mergedFile.size === 0) {
@@ -209,8 +194,9 @@ const PageGrid: React.FC = () => {
         const addedPages = newPageCount - originalPageCount;
         
         if (addedPages > 0) {
-          const method = usedImageBased ? 'image-based' : 'direct';
-          console.log(`[PDF Merge] Successfully merged: Added ${addedPages} page(s) from ${newFilesArray.length} file(s) using ${method} method`);
+          if (usedImageBased) {
+            alert('Some PDFs could not be copied as vector pages, so they were merged as images. Text in those pages may no longer be selectable.');
+          }
         } else {
           console.warn(`[PDF Merge] Warning: Merge completed but no new pages were added`);
         }
@@ -443,17 +429,17 @@ const PageGrid: React.FC = () => {
             onClick={handleOcr}
             disabled={isProcessing || isLoading}
             className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
-            title="OCR / Extract Text - Please always verify the accuracy of results!"
+            title="Extract text from the PDF, using OCR only on scanned pages"
           >
             <Scan className="w-4 h-4" />
             {isProcessing ? (
               ocrCurrentPage > 0 ? (
-                `OCR ${ocrCurrentPage}/${ocrTotalPages} (${Math.round(progress)}%)`
+                `Extract ${ocrCurrentPage}/${ocrTotalPages} (${Math.round(progress)}%)`
               ) : (
-                `OCR ${Math.round(progress)}%`
+                `Extract ${Math.round(progress)}%`
               )
             ) : (
-              'OCR All Pages'
+              'Extract Text'
             )}
           </button>
           
@@ -567,6 +553,8 @@ const PageGrid: React.FC = () => {
           confidence={result.confidence}
           pageNumber={result.pageNumber}
           totalPages={result.pageNumber === 0 ? totalPages : undefined}
+          nativePages={result.nativePages}
+          ocrPages={result.ocrPages}
           onClose={clearResult}
         />
       )}
@@ -576,7 +564,7 @@ const PageGrid: React.FC = () => {
         <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg max-w-md z-50">
           <div className="flex items-start gap-3">
             <div className="flex-1">
-              <h3 className="font-semibold text-red-800 mb-1">OCR Error</h3>
+              <h3 className="font-semibold text-red-800 mb-1">Text Extraction Error</h3>
               <p className="text-sm text-red-600">{error}</p>
               {error.toLowerCase().includes('language') || error.toLowerCase().includes('nyelv') ? (
                 <button
@@ -613,7 +601,6 @@ const PageGrid: React.FC = () => {
           onClose={() => setShowLanguageModal(false)}
           onLanguageDownloaded={() => {
             setShowLanguageModal(false);
-            // Optionally reload or refresh
           }}
         />
       )}

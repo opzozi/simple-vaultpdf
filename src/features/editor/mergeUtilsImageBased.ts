@@ -19,7 +19,7 @@ export async function mergePDFsImageBased(
   let hasProcessedAnyFile = false;
 
   try {
-    // Step 1: Load current PDF with pdf-lib (try direct load first)
+    // Load current PDF with pdf-lib (try direct load first)
     let currentPdf;
     let useImageBasedForCurrent = false;
     
@@ -38,7 +38,7 @@ export async function mergePDFsImageBased(
     // Create a new PDF document
     const mergedPdf = await PDFDocument.create();
 
-    // Step 2: Add pages from current PDF
+    // Add pages from current PDF
     if (!useImageBasedForCurrent && currentPdf) {
       // Direct copy from pdf-lib
       try {
@@ -65,20 +65,18 @@ export async function mergePDFsImageBased(
       for (let pageNum = 1; pageNum <= currentNumPages; pageNum++) {
         try {
           // Use 2.0x scale for good quality, but use original page dimensions
-          const { canvas, originalWidth, originalHeight } = await getPageCanvas(currentPdfDoc, pageNum, 2.0);
-          // Use JPEG with 0.9 quality for better quality while keeping file size reasonable
+          const { canvas } = await getPageCanvas(currentPdfDoc, pageNum, 2.0);
           const imageBlob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
           const imageBytes = await imageBlob.arrayBuffer();
           const image = await mergedPdf.embedJpg(imageBytes);
-          
-          // Use original page dimensions, not canvas dimensions
-          const page = mergedPdf.addPage([originalWidth, originalHeight]);
-          // Draw image at original size (scale down from high-res canvas)
+          const width = canvas.width / 2.0;
+          const height = canvas.height / 2.0;
+          const page = mergedPdf.addPage([width, height]);
           page.drawImage(image, {
             x: 0,
             y: 0,
-            width: originalWidth,
-            height: originalHeight,
+            width,
+            height,
           });
         } catch (error) {
           console.error(`[PDF Merge] Failed to render current PDF page ${pageNum}:`, error);
@@ -86,7 +84,7 @@ export async function mergePDFsImageBased(
       }
     }
 
-    // Step 3: Process each new file
+    // Process each new file
     for (let i = 0; i < newFiles.length; i++) {
       const newFile = newFiles[i];
       
@@ -157,23 +155,18 @@ export async function mergePDFsImageBased(
             for (let pageNum = 1; pageNum <= numPages; pageNum++) {
               try {
                 // Use 2.0x scale for good quality, but use original page dimensions
-                const { canvas, originalWidth, originalHeight } = await getPageCanvas(newPdfDoc, pageNum, 2.0);
-                
-                // Use JPEG with 0.9 quality for better quality while keeping file size reasonable
+                const { canvas } = await getPageCanvas(newPdfDoc, pageNum, 2.0);
                 const imageBlob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
                 const imageBytes = await imageBlob.arrayBuffer();
-                
-                // Embed JPEG image in PDF
                 const image = await mergedPdf.embedJpg(imageBytes);
-                
-                // Use original page dimensions, not canvas dimensions
-                const page = mergedPdf.addPage([originalWidth, originalHeight]);
-                // Draw image at original size (scale down from high-res canvas)
+                const width = canvas.width / 2.0;
+                const height = canvas.height / 2.0;
+                const page = mergedPdf.addPage([width, height]);
                 page.drawImage(image, {
                   x: 0,
                   y: 0,
-                  width: originalWidth,
-                  height: originalHeight,
+                  width,
+                  height,
                 });
                 
                 pagesAdded++;
@@ -186,7 +179,7 @@ export async function mergePDFsImageBased(
             if (pagesAdded === 0) {
               skippedFiles.push(`${newFile.name}: No pages could be rendered`);
             } else {
-              console.log(`[PDF Merge] Added ${pagesAdded}/${numPages} page(s) from ${newFile.name} using image-based method`);
+              // page added
             }
           } catch (imageBasedError) {
             const errorMsg = imageBasedError instanceof Error ? imageBasedError.message : String(imageBasedError);
@@ -241,9 +234,9 @@ export async function mergePDFsImageBased(
       errorMessage = error.message;
       // Log detailed error information
       // Log only the message, not the full object
-      console.log(`[PDF Merge] Image-based merge failed: ${error.message}`);
+      console.error(`[PDF Merge] Image-based merge failed: ${error.message}`);
     } else {
-      console.log(`[PDF Merge] Image-based merge failed: ${String(error)}`);
+      console.error(`[PDF Merge] Image-based merge failed: ${String(error)}`);
     }
     throw new Error(`PDF merge failed: ${errorMessage}`);
   }

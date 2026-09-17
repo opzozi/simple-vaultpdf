@@ -4,14 +4,6 @@ let offscreenDocumentCreated = false;
 let offscreenDocumentReady = false;
 let offscreenReadyPromise: Promise<void> | null = null;
 
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('Simple VaultPDF installed');
-});
-
-/**
- * Create offscreen document if it doesn't exist
- * Returns a promise that resolves when the document is ready to receive messages
- */
 async function ensureOffscreenDocument(): Promise<void> {
   if (offscreenDocumentReady) {
     return;
@@ -29,7 +21,6 @@ async function ensureOffscreenDocument(): Promise<void> {
       if (message.type === 'OFFSCREEN_READY') {
         chrome.runtime.onMessage.removeListener(readyListener);
         offscreenDocumentReady = true;
-        console.log('Offscreen document is ready to receive messages');
         resolve();
       }
     };
@@ -44,7 +35,6 @@ async function ensureOffscreenDocument(): Promise<void> {
         justification: 'Need DOM access for OCR and PDF processing with Tesseract.js',
       }).then(() => {
         offscreenDocumentCreated = true;
-        console.log('Offscreen document created, waiting for ready signal...');
         // Wait up to 5 seconds for ready signal
         setTimeout(() => {
           if (!offscreenDocumentReady) {
@@ -58,7 +48,6 @@ async function ensureOffscreenDocument(): Promise<void> {
         // Document might already exist
         if (error.message.includes('offscreen document already exists')) {
           offscreenDocumentCreated = true;
-          console.log('Offscreen document already exists, waiting for ready signal...');
           // Wait up to 5 seconds for ready signal
           setTimeout(() => {
             if (!offscreenDocumentReady) {
@@ -105,7 +94,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   
   // Handle OFFSCREEN_READY message
   if (message.type === 'OFFSCREEN_READY') {
-    console.log('Received OFFSCREEN_READY from offscreen document');
     return true;
   }
   
@@ -134,7 +122,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         
         chrome.runtime.onMessage.addListener(responseListener);
         
-        console.log('Sending OCR request to offscreen document...');
         // Forward OCR request to offscreen document with selected languages
         chrome.runtime.sendMessage({
           type: 'OCR_PROCESS',

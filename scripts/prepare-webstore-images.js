@@ -25,12 +25,12 @@ const SCREENSHOTS = [
 const INPUT_DIR = path.join(rootDir, 'screenshots', 'source');
 const OUTPUT_DIR = path.join(rootDir, 'screenshots', 'webstore');
 
-console.log('🖼️  Preparing Chrome Web Store images...\n');
+console.log('Preparing Chrome Web Store images...\n');
 
 // Ensure directories exist
 if (!fs.existsSync(INPUT_DIR)) {
-  console.error(`❌ Source images directory not found: ${INPUT_DIR}`);
-  console.log('\n📋 Instructions:');
+  console.error(`Source images directory not found: ${INPUT_DIR}`);
+  console.log('\nInstructions:');
   console.log('   1. Create a "screenshots/source" folder in the project root');
   console.log('   2. Place your source images there:');
   console.log('      - img-00-source.jpg/png (for promo tile)');
@@ -117,9 +117,9 @@ async function resizeImage(inputPath, outputPath, targetWidth, targetHeight) {
     .jpeg({ quality: 95, mozjpeg: true })
     .toFile(outputPath);
     
-    console.log(`✅ Created: ${path.basename(outputPath)} (${targetWidth}x${targetHeight})`);
+    console.log(`Created: ${path.basename(outputPath)} (${targetWidth}x${targetHeight})`);
   } catch (error) {
-    console.error(`❌ Error processing ${inputPath}:`, error.message);
+    console.error(`Error processing ${inputPath}:`, error.message);
     throw error;
   }
 }
@@ -137,7 +137,7 @@ async function processPromoTile() {
   const sourceFile = sourceFiles.find(file => fs.existsSync(file));
   
   if (!sourceFile) {
-    console.warn('⚠️  Promo tile source not found (img-00-source.jpg/png)');
+    console.warn('Promo tile source not found (img-00-source.jpg/png)');
     return;
   }
   
@@ -162,7 +162,7 @@ async function processScreenshots() {
     const sourceFile = sourceFiles.find(file => fs.existsSync(file));
     
     if (!sourceFile) {
-      console.warn(`⚠️  Screenshot ${i + 1} source not found (img-${sourceNumber}-source.jpg/png)`);
+      console.warn(`Screenshot ${i + 1} source not found (img-${sourceNumber}-source.jpg/png)`);
       continue;
     }
     
@@ -174,21 +174,21 @@ async function processScreenshots() {
 // Main execution
 async function main() {
   try {
-    console.log('1️⃣ Processing promo tile...');
+    console.log('1. Processing promo tile...');
     await processPromoTile();
     
-    console.log('\n2️⃣ Processing screenshots...');
+    console.log('\n2. Processing screenshots...');
     await processScreenshots();
     
-    console.log('\n🎉 All images processed successfully!');
-    console.log(`\n📁 Output directory: ${OUTPUT_DIR}`);
-    console.log('\n📋 Next steps:');
+    console.log('\nImages processed.');
+    console.log(`\nOutput directory: ${OUTPUT_DIR}`);
+    console.log('\nNext steps:');
     console.log('   1. Review the generated images');
     console.log('   2. Upload them to Chrome Web Store:');
     console.log('      - img-00-promo-tile.jpg → Promo tile (440x280)');
     console.log('      - img-01-screenshot-*.jpg → Screenshots (1280x800 or 640x400)');
   } catch (error) {
-    console.error('\n❌ Error:', error.message);
+    console.error('\nError:', error.message);
     process.exit(1);
   }
 }

@@ -32,12 +32,8 @@ const Popup: React.FC = () => {
         localStorage.clear();
       }
 
-      chrome.storage.local.clear(() => {
-        console.log('Chrome storage cleared');
-      });
-      chrome.storage.sync.clear(() => {
-        console.log('Chrome sync storage cleared');
-      });
+      chrome.storage.local.clear();
+      chrome.storage.sync.clear();
 
       if ('indexedDB' in window) {
         indexedDB.databases().then((databases) => {
@@ -61,7 +57,7 @@ const Popup: React.FC = () => {
   };
 
   const handleRateUs = () => {
-    chrome.tabs.create({ url: 'https://chromewebstore.google.com/detail/simple-vaultpdf/nefkedjebfockbphoninolplkhgpakoh/reviews?hl=hu&utm_source=ext_sidebar' });
+    chrome.tabs.create({ url: 'https://chromewebstore.google.com/detail/simple-vaultpdf/nefkedgebfockbphoninolplkhggpakoh/reviews' });
   };
 
   const handlePrivacyPolicy = () => {

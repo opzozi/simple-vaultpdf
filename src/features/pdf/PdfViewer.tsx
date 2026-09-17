@@ -7,16 +7,17 @@ import { useOcr } from '@/features/ocr/useOcr';
 import OcrResultModal from '@/features/ocr/OcrResultModal';
 import LanguageDownloadModal from '@/features/ocr/LanguageDownloadModal';
 import OcrPageSelectionModal from '@/features/ocr/OcrPageSelectionModal';
-import { saveCanvasAsImage, getAllPageCanvases, findVisiblePageCanvas, renderPageToHighResCanvas } from './imageExport';
+import { saveCanvasAsImage, renderPageToHighResCanvas } from './imageExport';
 import type { ImageFormat } from './imageExport';
 
 const PdfViewer: React.FC = () => {
-  const { totalPages, scale, setScale, reset, viewMode, setViewMode, file, pages, isLoading } = usePdfStore();
+  const { totalPages, currentPage, setCurrentPage, scale, setScale, reset, viewMode, setViewMode, file, pages, isLoading } = usePdfStore();
   const { processPages, isProcessing, progress, currentPage: ocrCurrentPage, totalPages: ocrTotalPages, result, error, clearResult } = useOcr();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showPageSelectionModal, setShowPageSelectionModal] = useState(false);
   const [showImageExportMenu, setShowImageExportMenu] = useState(false);
   const imageExportMenuRef = useRef<HTMLDivElement>(null);
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleZoomIn = () => {
     setScale(Math.min(scale + 0.25, 3.0));
@@ -42,16 +43,60 @@ const PdfViewer: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const root = pagesContainerRef.current;
+    if (!root || totalPages === 0) return;
+
+    let ticking = false;
+    const updateCurrentPage = () => {
+      const nodes = root.querySelectorAll<HTMLElement>('[data-pdf-page]');
+      if (nodes.length === 0) return;
+
+      const rootRect = root.getBoundingClientRect();
+      const anchor = rootRect.top + Math.min(160, rootRect.height * 0.25);
+
+      let nextPage = 1;
+      let bestDist = Infinity;
+      nodes.forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.bottom <= rootRect.top || rect.top >= rootRect.bottom) return;
+        const dist = Math.abs(rect.top - anchor);
+        if (dist < bestDist) {
+          bestDist = dist;
+          nextPage = Number(node.dataset.pdfPage) || nextPage;
+        }
+      });
+      setCurrentPage(nextPage);
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        updateCurrentPage();
+        ticking = false;
+      });
+    };
+
+    updateCurrentPage();
+    root.addEventListener('scroll', onScroll, { passive: true });
+    const resizeObserver = new ResizeObserver(onScroll);
+    resizeObserver.observe(root);
+
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+      resizeObserver.disconnect();
+    };
+  }, [totalPages, scale, setCurrentPage]);
+
   const handleOcr = () => {
-    // Show page selection modal
     setShowPageSelectionModal(true);
   };
 
-  const handlePageSelectionConfirm = async (selectedPages: number[]) => {
+  const handlePageSelectionConfirm = async (selectedPages: number[], options: { forceOcr: boolean }) => {
     setShowPageSelectionModal(false);
-    console.log('Starting OCR for pages:', selectedPages);
     try {
-      await processPages(selectedPages);
+      await processPages(selectedPages, options);
     } catch (err) {
       console.error('Failed to process pages:', err);
     }
@@ -60,43 +105,20 @@ const PdfViewer: React.FC = () => {
   const handleSaveAsImage = async (format: ImageFormat) => {
     try {
       const { pdfDocument } = usePdfStore.getState();
-      
       if (!pdfDocument) {
         alert('PDF document is not loaded. Please wait for the PDF to load.');
         return;
       }
 
-      // Get all page canvases to find the visible page
-      const canvases = getAllPageCanvases();
-      
-      if (canvases.length === 0) {
-        alert('No pages are currently rendered. Please wait for the PDF to load.');
-        return;
-      }
-
-      // Find the currently visible page
-      const visiblePage = findVisiblePageCanvas(canvases);
-      
-      if (!visiblePage) {
-        alert('Could not find a visible page. Please scroll to a page.');
-        return;
-      }
-
-      // Render the page at high resolution for better quality
-      // PNG: use 3.0x scale for maximum quality (lossless)
-      // JPG: use 2.5x scale (good balance between quality and file size)
+      const pageToExport = currentPage || 1;
       const exportScale = format === 'png' ? 3.0 : 2.5;
-      
       const highResCanvas = await renderPageToHighResCanvas(
         pdfDocument,
-        visiblePage.pageNumber,
+        pageToExport,
         exportScale
       );
 
-      // Save the high-resolution canvas as image
-      // PNG: lossless, no quality parameter needed
-      // JPG: use high quality (0.95)
-      saveCanvasAsImage(highResCanvas, visiblePage.pageNumber, format, format === 'jpg' ? 0.95 : 1.0);
+      saveCanvasAsImage(highResCanvas, pageToExport, format, format === 'jpg' ? 0.95 : 1.0);
       setShowImageExportMenu(false);
     } catch (error) {
       console.error('Error saving page as image:', error);
@@ -129,8 +151,8 @@ const PdfViewer: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900">
             PDF Viewer
           </h2>
-          <span className="text-sm text-gray-500">
-            {totalPages} {totalPages === 1 ? 'page' : 'pages'}
+          <span className="text-sm text-gray-500 tabular-nums">
+            {totalPages > 0 ? `Page ${currentPage} of ${totalPages}` : '0 pages'}
           </span>
         </div>
         
@@ -221,17 +243,17 @@ const PdfViewer: React.FC = () => {
             onClick={handleOcr}
             disabled={isProcessing || isLoading}
             className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
-            title="OCR / Extract Text - Please always verify the accuracy of results!"
+            title="Extract text from the PDF, using OCR only on scanned pages"
           >
             <Scan className="w-4 h-4" />
             {isProcessing ? (
               ocrCurrentPage > 0 ? (
-                `OCR ${ocrCurrentPage}/${ocrTotalPages} (${Math.round(progress)}%)`
+                `Extract ${ocrCurrentPage}/${ocrTotalPages} (${Math.round(progress)}%)`
               ) : (
-                `OCR ${Math.round(progress)}%`
+                `Extract ${Math.round(progress)}%`
               )
             ) : (
-              'OCR All Pages'
+              'Extract Text'
             )}
           </button>
           
@@ -265,7 +287,7 @@ const PdfViewer: React.FC = () => {
       </div>
 
       {/* PDF Pages Container */}
-      <div className="flex-1 overflow-y-auto overflow-x-auto p-4">
+      <div ref={pagesContainerRef} className="flex-1 overflow-y-auto overflow-x-auto p-4">
         <div className="mx-auto" style={{ maxWidth: '100%' }}>
           {Array.from({ length: totalPages }, (_, i) => (
             <PdfPage key={i + 1} pageNumber={i + 1} />
@@ -280,6 +302,8 @@ const PdfViewer: React.FC = () => {
           confidence={result.confidence}
           pageNumber={result.pageNumber}
           totalPages={result.pageNumber === 0 ? totalPages : undefined}
+          nativePages={result.nativePages}
+          ocrPages={result.ocrPages}
           onClose={clearResult}
         />
       )}
@@ -289,7 +313,7 @@ const PdfViewer: React.FC = () => {
         <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg max-w-md z-50">
           <div className="flex items-start gap-3">
             <div className="flex-1">
-              <h3 className="font-semibold text-red-800 mb-1">OCR Error</h3>
+              <h3 className="font-semibold text-red-800 mb-1">Text Extraction Error</h3>
               <p className="text-sm text-red-600">{error}</p>
               {error.toLowerCase().includes('language') || error.toLowerCase().includes('nyelv') ? (
                 <button
@@ -326,7 +350,6 @@ const PdfViewer: React.FC = () => {
           onClose={() => setShowLanguageModal(false)}
           onLanguageDownloaded={() => {
             setShowLanguageModal(false);
-            // Optionally reload or refresh
           }}
         />
       )}

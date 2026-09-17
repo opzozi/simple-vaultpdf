@@ -3,7 +3,7 @@ import { X, Check, CheckSquare, Square } from 'lucide-react';
 
 interface OcrPageSelectionModalProps {
   totalPages: number;
-  onConfirm: (selectedPages: number[]) => void;
+  onConfirm: (selectedPages: number[], options: { forceOcr: boolean }) => void;
   onClose: () => void;
 }
 
@@ -14,6 +14,7 @@ const OcrPageSelectionModal: React.FC<OcrPageSelectionModalProps> = ({
 }) => {
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(true);
+  const [forceOcr, setForceOcr] = useState(false);
 
   useEffect(() => {
     // Initially select all pages
@@ -49,7 +50,7 @@ const OcrPageSelectionModal: React.FC<OcrPageSelectionModalProps> = ({
       alert('Please select at least one page');
       return;
     }
-    onConfirm(sortedPages);
+    onConfirm(sortedPages, { forceOcr });
   };
 
   return (
@@ -59,7 +60,7 @@ const OcrPageSelectionModal: React.FC<OcrPageSelectionModalProps> = ({
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
-              Select Pages for OCR
+              Select Pages to Extract
             </h2>
             <p className="text-sm text-gray-500">
               {selectedPages.size} of {totalPages} pages selected
@@ -121,19 +122,30 @@ const OcrPageSelectionModal: React.FC<OcrPageSelectionModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Process {selectedPages.size} Page{selectedPages.size !== 1 ? 's' : ''}
-          </button>
+        <div className="flex items-center justify-between gap-2 p-4 border-t border-gray-200">
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={forceOcr}
+              onChange={(e) => setForceOcr(e.target.checked)}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Force OCR (ignore embedded text)
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Extract {selectedPages.size} Page{selectedPages.size !== 1 ? 's' : ''}
+            </button>
+          </div>
         </div>
       </div>
     </div>

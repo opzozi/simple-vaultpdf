@@ -10,6 +10,8 @@ dist-ssr
 
 # Web Store package
 webstore/
+store-package/
+release/
 *.zip
 
 # Logs

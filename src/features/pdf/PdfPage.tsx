@@ -95,7 +95,14 @@ const PdfPage: React.FC<PdfPageProps> = ({ pageNumber }) => {
   }
 
   return (
-    <div className="mb-4 flex justify-center bg-white shadow-sm rounded border border-gray-200 p-4 relative">
+    <div
+      data-pdf-page={pageNumber}
+      data-page-number={pageNumber}
+      className="mb-4 flex justify-center bg-white shadow-sm rounded border border-gray-200 p-4 relative"
+    >
+      <div className="absolute top-2 right-2 z-10 bg-black/60 text-white text-xs px-2 py-1 rounded tabular-nums">
+        {pageNumber}
+      </div>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 rounded z-10">
           <p className="text-gray-600">Loading page {pageNumber}...</p>
@@ -105,8 +112,8 @@ const PdfPage: React.FC<PdfPageProps> = ({ pageNumber }) => {
         <canvas
           ref={canvasRef}
           data-page-number={pageNumber}
-          style={{ 
-            display: isLoading ? 'none' : 'block'
+          style={{
+            display: isLoading ? 'none' : 'block',
           }}
         />
       </div>

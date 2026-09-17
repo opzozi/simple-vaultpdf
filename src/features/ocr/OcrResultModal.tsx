@@ -1,12 +1,13 @@
-import React from 'react';
-import { X, Copy, Check, AlertTriangle, Download } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { X, Copy, Check, AlertTriangle, Download, FileText } from 'lucide-react';
 
 interface OcrResultModalProps {
   text: string;
   confidence: number;
   pageNumber: number;
   totalPages?: number;
+  nativePages?: number;
+  ocrPages?: number;
   onClose: () => void;
 }
 
@@ -15,10 +16,14 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
   confidence,
   pageNumber,
   totalPages,
+  nativePages = 0,
+  ocrPages = 0,
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const usedOcr = ocrPages > 0;
+  const usedNative = nativePages > 0;
 
   const handleCopy = async () => {
     try {
@@ -32,26 +37,19 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
 
   const handleDownload = () => {
     try {
-      // Create blob with text content
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      
-      // Create download URL
       const url = URL.createObjectURL(blob);
-      
-      // Create download link
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const filename = `ocr-result-${timestamp}.txt`;
-      
+      const filename = `extracted-text-${timestamp}.txt`;
+
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
-      // Clean up
       URL.revokeObjectURL(url);
-      
+
       setDownloaded(true);
       setTimeout(() => setDownloaded(false), 2000);
     } catch (error) {
@@ -59,21 +57,27 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
     }
   };
 
+  const sourceLabel = usedNative && usedOcr
+    ? `${nativePages} page${nativePages === 1 ? '' : 's'} from PDF text, ${ocrPages} via OCR`
+    : usedOcr
+      ? 'OCR text extraction'
+      : 'Copied from the PDF text layer';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
               {pageNumber === 0 && totalPages ? (
-                <>OCR Result - All Pages ({totalPages} pages)</>
+                <>Extracted Text ({totalPages} pages)</>
               ) : (
-                <>OCR Result - Page {pageNumber}</>
+                <>Extracted Text - Page {pageNumber}</>
               )}
             </h2>
             <p className="text-sm text-gray-500">
-              Confidence: {Math.round(confidence)}% | OCR Text Extraction
+              {usedOcr ? `OCR confidence: ${Math.round(confidence)}% | ` : null}
+              {sourceLabel}
             </p>
           </div>
           <button
@@ -84,24 +88,35 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
           </button>
         </div>
 
-        {/* Disclaimer */}
-        <div className="mx-4 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-yellow-800 font-medium mb-1">
-                OCR Accuracy Disclaimer
-              </p>
-              <p className="text-xs text-yellow-700">
-                OCR (Optical Character Recognition) results may vary in accuracy. 
-                Please always review and correct the recognized text, as errors may occur. 
-                We do not take responsibility for OCR accuracy.
+        {usedNative && !usedOcr && (
+          <div className="mx-4 mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <FileText className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-green-800">
+                This PDF already contains text, so it was copied directly. No OCR was needed.
               </p>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Content */}
+        {usedOcr && (
+          <div className="mx-4 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-yellow-800 font-medium mb-1">
+                  OCR Accuracy Disclaimer
+                </p>
+                <p className="text-xs text-yellow-700">
+                  {usedNative
+                    ? 'Some pages had no usable text layer, so OCR was used there. OCR results may contain errors — please review them.'
+                    : 'These pages looked scanned, so OCR was used. Results may vary in accuracy. Please review and correct the text. We do not take responsibility for OCR accuracy.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-4">
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono">
@@ -110,7 +125,6 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200">
           <button
             onClick={handleDownload}
@@ -157,4 +171,3 @@ const OcrResultModal: React.FC<OcrResultModalProps> = ({
 };
 
 export default OcrResultModal;
-
